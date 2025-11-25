@@ -27,7 +27,7 @@ class MathEditEnvironment:
     
     def reset(self) -> EditorState:
         """Reset environment to initial state."""
-        lines = self.initial_solution.strip().split('\\n')
+        lines = self.initial_solution.strip().split('\n')
         is_solved, feedback = self.verifier.verify_solution(self.initial_solution)
         
         self.state = EditorState(
@@ -57,8 +57,8 @@ class MathEditEnvironment:
         for i, line in enumerate(state.lines, start=1):
             lines_str.append(f"L {i} {line}")
         
-        result = '\\n'.join(lines_str)
-        result += '\\n***\\n'
+        result = '\n'.join(lines_str)
+        result += '\n***\n'
         
         if state.feedback:
             result += state.feedback
@@ -117,7 +117,7 @@ class MathEditEnvironment:
             return self.state, False, error_msg
         
         # Verify new solution
-        new_solution = '\\n'.join(new_lines)
+        new_solution = '\n'.join(new_lines)
         is_solved, feedback = self.verifier.verify_solution(new_solution)
         
         # Create new state
@@ -141,4 +141,4 @@ class MathEditEnvironment:
     
     def get_full_trace(self) -> str:
         """Get the full editing trace as a string."""
-        return '\\n'.join([self.format_state_for_llm(s) for s in self.history])
+        return '\n'.join([self.format_state_for_llm(s) for s in self.history])

@@ -63,13 +63,35 @@ class GeminiCoEAgent:
             response = self.model.generate_content(prompt)
             self.num_requests += 1
             
-            # Extract command from response
-            command = self._extract_command(response.text)
+            # Check if response has valid content
+            if not response or not response.candidates:
+                print("⚠ No response candidates returned")
+                return None
             
-            return command
+            candidate = response.candidates[0]
+            
+            # Check finish reason
+            if candidate.finish_reason != 1:  # 1 = STOP (normal completion)
+                reasons = {
+                    2: "SAFETY (content filtered)",
+                    3: "RECITATION (quoted text)",
+                    4: "OTHER",
+                    5: "MAX_TOKENS"
+                }
+                reason = reasons.get(candidate.finish_reason, f"UNKNOWN({candidate.finish_reason})")
+                print(f"⚠ Response blocked: {reason}")
+                return None
+            
+            # Extract command from response
+            if hasattr(response, 'text') and response.text:
+                command = self._extract_command(response.text)
+                return command
+            else:
+                print("⚠ Response has no text content")
+                return None
             
         except Exception as e:
-            print(f"Error generating edit command: {e}")
+            print(f"⚠ Error generating edit command: {e}")
             return None
     
     def _build_prompt(

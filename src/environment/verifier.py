@@ -21,7 +21,7 @@ class MathVerifier:
     
     def verify_solution(self, solution_text: str) -> Tuple[bool, str]:
         """
-        Verify if solution matches ground truth.
+        Verify if solution matches ground truth by comparing final answers.
         
         Args:
             solution_text: The solution to verify (multi-line string)
@@ -29,32 +29,52 @@ class MathVerifier:
         Returns:
             (is_correct, feedback_message)
         """
-        # Extract the final answer from solution
-        final_answer = self._extract_final_answer(solution_text)
+        # Extract final answers from both solution and ground truth
+        solution_answer = self._extract_final_answer(solution_text)
+        truth_answer = self._extract_final_answer(self.task.ground_truth)
         
-        if not final_answer:
-            return False, "Error: No final answer found. Solution must contain 'Answer:' or 'Result:' line."
+        if not solution_answer:
+            return False, "Error: No final answer found. Solution must contain 'Answer:' or end with answer like 'x = 4'"
         
-        # Compare with ground truth
-        is_correct = self._compare_answers(final_answer, self.task.ground_truth)
+        if not truth_answer:
+            # If ground truth has no extractable answer, use it as-is
+            truth_answer = self.task.ground_truth.strip()
+        
+        # Compare the final answers
+        is_correct = self._compare_answers(solution_answer, truth_answer)
         
         if is_correct:
             return True, ""
         else:
-            return False, f"Test failed: expected {self.task.ground_truth}, got {final_answer}"
+            return False, f"Test failed: expected answer '{truth_answer}', got '{solution_answer}'"
+
     
     def _extract_final_answer(self, solution_text: str) -> Optional[str]:
         """Extract the final answer from solution text."""
-        lines = solution_text.strip().split('\\n')
+        lines = solution_text.strip().split('\n')
+
         
         # Look for lines starting with Answer: or Result:
         for line in reversed(lines):
             line = line.strip()
-            if line.startswith("Answer:") or line.startswith("Result:"):
+            if line.startswith(("Answer:", "Result:")):
                 answer = line.split(":", 1)[1].strip()
                 return answer
         
-        # If no explicit answer, take the last non-empty line
+        # Look for lines that look like variable assignments (x = value, y = value, etc.)
+        for line in reversed(lines):
+            line = line.strip()
+            # Match patterns like "x = 4", "y = 10", "answer = 5", etc.
+            if '=' in line and len(line.split('=')) == 2:
+                var, val = line.split('=')
+                # Check if it looks like a final answer (variable on left, value on right)
+                if var.strip() and val.strip():
+                    # Prioritize single-letter variables or "answer"
+                    var_name = var.strip().lower()
+                    if len(var_name) <= 2 or 'answer' in var_name:
+                        return line.strip()
+        
+        # If no explicit answer or variable found, take the last non-empty line
         for line in reversed(lines):
             if line.strip():
                 return line.strip()

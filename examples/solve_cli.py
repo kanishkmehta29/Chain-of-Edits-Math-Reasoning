@@ -93,7 +93,13 @@ def main():
     initial_feedback = "Please fix this solution"
     
     # Set ground truth
-    ground_truth = args.truth if args.truth else args.initial
+    # If not provided, use a generic placeholder (free-form solving)
+    if args.truth:
+        ground_truth = args.truth
+    else:
+        # Extract just the final answer for minimal verification
+        ground_truth = "Correct solution with proper steps and final answer"
+
     
     # Solve
     success, num_steps, edit_history = agent.solve_problem(
