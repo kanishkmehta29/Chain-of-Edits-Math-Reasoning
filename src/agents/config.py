@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 class GeminiConfig:
     """Configuration for Gemini API."""
     api_key: str
-    model: str = "gemini-2.5-flash-lite"
+    model: str = "gemini-2.0-flash-lite"
     temperature: float = 0.7
     max_output_tokens: int = 1024
     
@@ -49,7 +49,7 @@ class GeminiConfig:
             )
         
         # Get optional parameters
-        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+        model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite')
         temperature = float(os.getenv('GEMINI_TEMPERATURE', '0.7'))
         max_output_tokens = int(os.getenv('GEMINI_MAX_OUTPUT_TOKENS', '1024'))
         

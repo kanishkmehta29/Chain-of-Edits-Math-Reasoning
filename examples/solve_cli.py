@@ -15,7 +15,7 @@ from agents import GeminiConfig, GeminiCoEAgent
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Solve math problems using Gemini with Chain-of-Edits'
+        description='Solve math problems using LLM with Chain-of-Edits'
     )
     parser.add_argument(
         '--problem',
@@ -40,17 +40,38 @@ def main():
         default=15,
         help='Maximum edit steps (default: 15)'
     )
+    
+    # Model selection
+    parser.add_argument(
+        '--model-type',
+        type=str,
+        choices=['gemini', 'local'],
+        default='gemini',
+        help='Type of model to use: gemini (API) or local (downloaded)'
+    )
     parser.add_argument(
         '--model',
         type=str,
-        default='gemini-2.5-flash',
-        help='Gemini model to use (default: gemini-2.5-flash)'
+        help='Model name (for Gemini: gemini-2.0-flash-lite, for Local: microsoft/Phi-3.5-mini-instruct)'
     )
+    parser.add_argument(
+        '--adapter-path',
+        type=str,
+        help='Path to fine-tuned LoRA adapter (for local models only)'
+    )
+    parser.add_argument(
+        '--load-in-4bit',
+        action='store_true',
+        help='Load local model in 4-bit quantization (saves memory)'
+    )
+    
+    # Gemini-specific
     parser.add_argument(
         '--api-key',
         type=str,
         help='Gemini API key (optional, can use .env instead)'
     )
+    
     parser.add_argument(
         '--quiet',
         action='store_true',
@@ -59,32 +80,51 @@ def main():
     
     args = parser.parse_args()
     
-    # Load configuration
+    # Create agent based on model type
     try:
-        if args.api_key:
-            config = GeminiConfig.from_api_key(
-                api_key=args.api_key,
-                model=args.model
+        if args.model_type == 'gemini':
+            from agents import create_gemini_agent
+            
+            if args.api_key:
+                agent = create_gemini_agent(
+                    api_key=args.api_key,
+                    model=args.model or 'gemini-2.0-flash-lite'
+                )
+            else:
+                from agents import GeminiConfig, GeminiCoEAgent
+                config = GeminiConfig.from_env()
+                if args.model:
+                    config.model = args.model
+                agent = GeminiCoEAgent(config)
+            
+            model_name = agent.config.model
+            
+        else:  # local
+            from agents import create_local_agent
+            
+            agent = create_local_agent(
+                model_path=args.model or 'microsoft/Phi-3.5-mini-instruct',
+                adapter_path=args.adapter_path,
+                load_in_4bit=args.load_in_4bit
             )
-        else:
-            config = GeminiConfig.from_env()
-            # Override model if specified
-            if args.model != 'gemini-2.5-flash':
-                config.model = args.model
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        print("Please provide API key via --api-key or .env file", file=sys.stderr)
-        sys.exit(1)
+            
+            model_name = agent.config.model_name_or_path
+            if args.adapter_path:
+                model_name += f" (fine-tuned: {args.adapter_path})"
     
-    # Create agent
-    agent = GeminiCoEAgent(config)
+    except Exception as e:
+        print(f"Error loading model: {e}", file=sys.stderr)
+        if args.model_type == 'gemini':
+            print("Please provide API key via --api-key or .env file", file=sys.stderr)
+        sys.exit(1)
+
     
     if not args.quiet:
         print("=" * 70)
-        print("Gemini Math Solver (Chain-of-Edits)")
+        print("LLM Math Solver (Chain-of-Edits)")
         print("=" * 70)
-        print(f"\nProblem: {args.problem}")
-        print(f"Model: {config.model}")
+        print(f"\nModel Type: {args.model_type}")
+        print(f"Model: {model_name}")
         print()
     
     # Prepare initial state

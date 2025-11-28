@@ -8,3 +8,11 @@ python-dotenv>=1.0.0
 
 # Development/Testing
 pytest>=6.0.0
+
+# Local LLM Support
+transformers>=4.40.0
+torch>=2.0.0
+peft>=0.10.0
+datasets>=2.18.0
+accelerate>=0.27.0
+safetensors>=0.4.0
